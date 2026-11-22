@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Páramo Vivo — Simulador de producción rural sostenible</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3eee2; --card:#fffdf7; --ink:#25302a; --muted:#6b6f63; --line:#e2dccb;
+  --green:#2f5a43; --green2:#4f7f5f; --ochre:#c38b2c; --red:#b5462f; --blue:#2f6f8f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nunito Sans",system-ui,sans-serif;font-size:15px;line-height:1.45}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;margin:0}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:1240px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+  background:linear-gradient(120deg,#2f5a43,#3f6f55 55%,#6b8a4f);color:#fff;border-radius:18px;padding:18px 22px;margin-bottom:16px}
+header h1{font-size:30px;font-weight:800;letter-spacing:-.5px}
+header p{margin:2px 0 0;opacity:.88;font-size:14px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:8px 14px;min-width:118px}
+.stat small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.8}
+.stat b{font-size:20px}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+.card h2{font-size:18px;margin-bottom:10px}
+.card h3{font-size:15px;margin:0 0 8px}
+.hint{color:var(--muted);font-size:13px}
+/* farm */
+.farm{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:10px;border-radius:14px;
+  background:linear-gradient(#dfe7e3 0 50%,#ece3cf 50% 100%)}
+.zonelabel{grid-column:1/-1;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#41606b;display:flex;justify-content:space-between}
+.zonelabel.agri{color:#7a5f2f}
+.tile{position:relative;aspect-ratio:1/1;border-radius:10px;border:2px solid transparent;display:flex;align-items:center;justify-content:center;
+  font-size:clamp(20px,3.6vw,32px);user-select:none;transition:transform .08s, box-shadow .15s;box-shadow:0 1px 0 rgba(0,0,0,.12)}
+.tile:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.tile.sel{border-color:#1d2b24;box-shadow:0 0 0 3px rgba(29,43,36,.25)}
+.tile.changed::after{content:"●";position:absolute;top:2px;right:5px;font-size:11px;color:#fff;text-shadow:0 0 2px #000}
+.tile .badge{position:absolute;bottom:9px;right:4px;font-size:13px}
+.tile .soil{position:absolute;left:5px;right:5px;bottom:4px;height:4px;border-radius:3px;background:rgba(0,0,0,.18);overflow:hidden}
+.tile .soil i{display:block;height:100%}
+.tile .stage{position:absolute;top:3px;left:5px;font-size:10px;font-weight:800;color:#28412f}
+.tile.burned{outline:2px dashed var(--red);outline-offset:-4px}
+.palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:12px}
+.tool{display:flex;gap:8px;align-items:center;text-align:left;border:2px solid var(--line);background:#fff;border-radius:12px;padding:8px 10px;font-size:13px;line-height:1.2}
+.tool .ic{font-size:22px}
+.tool small{display:block;color:var(--muted);font-size:11px}
+.tool.on{border-color:var(--green);background:#eef5ef}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.btn{border:none;border-radius:12px;padding:11px 18px;font-weight:800;font-size:15px}
+.btn.primary{background:var(--green);color:#fff}
+.btn.primary:hover{background:#244836}
+.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.check{display:flex;gap:8px;align-items:flex-start;background:#f1f6ee;border:1px solid #d5e3cf;border-radius:12px;padding:9px 12px;font-size:13px;flex:1;min-width:240px}
+.check input{margin-top:3px;width:17px;height:17px;accent-color:var(--green)}
+/* indicators */
+.ind{margin-bottom:12px}
+.ind .top{display:flex;justify-content:space-between;font-weight:700;font-size:14px}
+.ind .top span:last-child{font-variant-numeric:tabular-nums}
+.bar{position:relative;height:12px;border-radius:7px;background:#ece7da;overflow:visible;margin-top:4px}
+.bar i{display:block;height:100%;border-radius:7px;transition:width .4s}
+.bar .goal{position:absolute;top:-4px;bottom:-4px;width:2px;background:#1d2b24}
+.ind .sub{font-size:12px;color:var(--muted)}
+.ok{color:var(--green2);font-weight:800}.bad{color:var(--red);font-weight:800}
+.event{display:flex;gap:12px;align-items:center;background:#f5f1e6;border-radius:12px;padding:10px 12px}
+.event .big{font-size:34px}
+.fauna{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.fa{display:flex;gap:8px;align-items:center;font-size:13px;background:#f6f3ea;border-radius:10px;padding:7px 9px}
+.fa .e{font-size:22px}
+.fa.off{opacity:.38;filter:grayscale(1)}
+.pinfo{font-size:13px}
+.pinfo table{width:100%;border-collapse:collapse}
+.pinfo td{padding:3px 0;border-bottom:1px dashed var(--line)}
+.pinfo td:last-child{text-align:right;font-weight:700}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.charts{grid-template-columns:1fr}}
+svg text{font-family:"Nunito Sans",sans-serif}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:4px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--c)}
+.log{max-height:330px;overflow:auto;font-size:13px}
+.log .entry{border-left:4px solid var(--green2);padding:6px 10px;margin-bottom:8px;background:#f8f5ec;border-radius:0 10px 10px 0}
+.log .entry b{font-family:Fraunces,serif}
+.log ul{margin:4px 0 0 0;padding-left:18px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#1d2b24;color:#fff;padding:10px 16px;border-radius:12px;
+  font-size:14px;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;z-index:50}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.modal{position:fixed;inset:0;background:rgba(20,28,24,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}
+.modal.show{display:flex}
+.modal .box{background:var(--card);border-radius:18px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:22px 24px}
+.modal h2{font-size:24px;margin-bottom:8px}
+.modal h3{margin:14px 0 4px;font-size:16px}
+.modal ul{padding-left:20px;margin:4px 0}
+.score{font-size:46px;font-family:Fraunces,serif;font-weight:800;color:var(--green)}
+.crit{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+@media(max-width:600px){.crit{grid-template-columns:1fr 1fr}}
+.crit div{background:#f6f3ea;border-radius:10px;padding:8px;font-size:13px;text-align:center}
+.crit div b{display:block;font-size:20px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;font-weight:700;font-size:13px}
+.tabs button.on{background:var(--green);color:#fff;border-color:var(--green)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:6px 0 20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>🌿 Páramo Vivo</h1>
+      <p>Simulador de producción rural y manejo del ecosistema de páramo — Boyacá / Cundinamarca, Colombia</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Año</small><b id="sYear">1 / 10</b></div>
+      <div class="stat"><small>Ahorros familia</small><b id="sMoney">$8,0 M</b></div>
+      <div class="stat"><small>Balance estimado del año</small><b id="sIncome">—</b></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>La finca de la familia Pinzón (36 hectáreas)</h2>
+        <div class="hint">1) Elige una acción abajo · 2) Haz clic en las parcelas para aplicarla · 3) Pulsa <b>“Avanzar al siguiente año”</b>. La barra de color en cada parcela es la salud del suelo.</div>
+        <div style="height:10px"></div>
+        <div class="farm" id="farm"></div>
+        <div class="palette" id="palette"></div>
+        <div class="controls">
+          <label class="check"><input type="checkbox" id="psa">
+            <span><b>Acuerdo de conservación con Pago por Servicios Ambientales (PSA)</b><br>
+            Recibes $0,45 M al año por cada hectárea de páramo conservado o en restauración, <u>solo si no hay cultivos ni ganado dentro de la zona de páramo</u>.</span></label>
+        </div>
+        <div class="controls">
+          <button class="btn primary" id="next">Avanzar al siguiente año ▶</button>
+          <button class="btn ghost" id="help">¿Cómo jugar?</button>
+          <button class="btn ghost" id="learn">📚 Aprende sobre el páramo</button>
+          <button class="btn ghost" id="reset">↺ Reiniciar</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Estado del ecosistema</h2>
+        <div class="hint" style="margin-bottom:10px">Proyección para el próximo año con clima normal. Se actualiza cada vez que cambias una parcela. La línea negra es la meta para el año 10.</div>
+        <div id="inds"></div>
+      </div>
+      <div class="card">
+        <h2>Clima y mercado del último año</h2>
+        <div class="event" id="event"></div>
+      </div>
+      <div class="card">
+        <h2>Fauna y flora</h2>
+        <div class="fauna" id="fauna"></div>
+      </div>
+      <div class="card">
+        <h2>Parcela seleccionada</h2>
+        <div class="pinfo" id="pinfo"><span class="hint">Haz clic en una parcela (con la herramienta 🔍 Inspeccionar) para ver sus detalles.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="card">
+      <h2>Evolución ambiental</h2>
+      <div id="chartEnv"></div>
+      <div class="legend"><span style="--c:#2f6f8f">Agua disponible</span><span style="--c:#4f7f5f">Biodiversidad</span><span style="--c:#b5462f">Contaminación</span><span style="--c:#a0703f">Suelo promedio</span></div>
+    </div>
+    <div class="card">
+      <h2>Economía familiar (millones COP)</h2>
+      <div id="chartMoney"></div>
+      <div class="legend"><span style="--c:#c38b2c">Ingresos de la finca</span><span style="--c:#25302a">Necesidades de la familia ($28 M)</span><span style="--c:#2f5a43">Ahorros acumulados</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Bitácora del técnico agroambiental</h2>
+    <div class="log" id="log"></div>
+  </div>
+  <footer>Páramo Vivo · Modelo educativo simplificado: las cifras son ilustrativas y sirven para comparar estrategias, no para predecir resultados reales.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="mHelp"><div class="box">
+  <h2>¿Cómo jugar?</h2>
+  <p>Eres el técnico que asesora a la familia Pinzón, campesinos de alta montaña. Su finca tiene <b>18 hectáreas dentro de la zona de páramo</b> (arriba, sobre los 3.200 m) y <b>18 en la zona agrícola</b> (abajo). Tienes <b>10 años</b> para que la familia viva de su tierra sin destruir el páramo que surte de agua a la vereda.</p>
+  <h3>Cada año</h3>
+  <ul>
+    <li>Elige una acción y aplícala en las parcelas. Cada cambio tiene un costo de inversión que se descuenta de los ahorros. Puedes endeudarte hasta <b>−$15 M</b>.</li>
+    <li>Pulsa <b>Avanzar</b>. El simulador sortea el clima (año normal, El Niño, La Niña o heladas) y el precio de la papa, y calcula ingresos, suelo, agua, contaminación y biodiversidad.</li>
+    <li>La familia necesita <b>$28 M al año</b> para vivir. Si las deudas pasan de −$25 M, la familia abandona la finca.</li>
+  </ul>
+  <h3>Metas al terminar el año 10</h3>
+  <div class="crit">
+    <div>💰<b>≥ $0</b>Ahorros</div><div>💧<b>≥ 60</b>Agua</div><div>🐻<b>≥ 50</b>Biodiversidad</div><div>☠️<b>≤ 40</b>Contaminación</div>
+  </div>
+  <h3>Usos del suelo</h3>
+  <div id="helpUses"></div>
+  <h3>Reglas clave del ecosistema</h3>
+  <ul>
+    <li><b>Agua:</b> el páramo funciona como una esponja. Cuanta más vegetación nativa haya en la zona alta, más agua regula. El ganado compacta el suelo y reduce la infiltración. Con agua por debajo de 60, los cultivos rinden menos.</li>
+    <li><b>Suelo:</b> el rendimiento depende de la salud del suelo. La papa convencional lo agota rápido, sobre todo en el suelo frágil del páramo y en años de La Niña (erosión).</li>
+    <li><b>Contaminación:</b> los agroquímicos se acumulan en el agua y bajan cada año a la mitad si dejas de aplicarlos.</li>
+    <li><b>Biodiversidad:</b> sube con las coberturas nativas, sobre todo si las parcelas de páramo están conectadas entre sí. Baja con la contaminación.</li>
+    <li><b>Ley de páramos (Ley 1930 de 2018):</b> prohíbe ampliar la frontera agropecuaria en páramos. Una parcela de páramo que conviertas en cultivo o potrero (marcada con borde punteado rojo) tiene un 30 % de probabilidad de recibir cada año una multa de $2 M.</li>
+  </ul>
+  <div class="controls"><button class="btn primary" data-close>¡Empezar!</button></div>
+</div></div>
+
+<div class="modal" id="mLearn"><div class="box">
+  <h2>📚 El problema: producción agropecuaria en el páramo</h2>
+  <div class="tabs" id="learnTabs">
+    <button class="on" data-t="t1">Qué es</button><button data-t="t2">Causas</button><button data-t="t3">Impactos</button><button data-t="t4">Soluciones</button>
+  </div>
+  <div id="t1" class="tab">
+    <p>Los páramos son ecosistemas de alta montaña tropical, por encima del bosque andino, dominados por frailejones, pajonales, musgos y turberas. Colombia tiene cerca de la mitad de los páramos del mundo, y de ellos depende buena parte del agua que consume el país, incluidos los acueductos de ciudades como Bogotá y Tunja.</p>
+    <p>Su suelo, rico en materia orgánica, y su vegetación retienen la humedad de la niebla y la lluvia y la sueltan poco a poco. Por eso se dice que funcionan como una <b>esponja</b> que regula los ríos en épocas secas.</p>
+  </div>
+  <div id="t2" class="tab" style="display:none"><ul>
+    <li><b>Ampliación de la frontera agrícola:</b> la papa, que da buenas cosechas en los suelos fértiles recién abiertos, avanza sobre el páramo.</li>
+    <li><b>Ganadería extensiva:</b> el pisoteo compacta el suelo y destruye frailejones y turberas. Las quemas para renovar pastos también hacen daño.</li>
+    <li><b>Uso intensivo de agroquímicos</b> (fertilizantes y plaguicidas) en el monocultivo de papa.</li>
+    <li><b>Pobreza y pocas alternativas económicas</b> para las familias campesinas, y precios de la papa muy inestables.</li>
+    <li><b>Cambio climático:</b> más sequías, lluvias extremas y heladas.</li>
+  </ul></div>
+  <div id="t3" class="tab" style="display:none"><ul>
+    <li>Pérdida de regulación hídrica: menos agua en verano y crecientes en invierno.</li>
+    <li>Erosión y pérdida de fertilidad del suelo, lo que hace bajar las cosechas con los años.</li>
+    <li>Contaminación de quebradas y acueductos veredales por agroquímicos.</li>
+    <li>Pérdida de biodiversidad: frailejones (que crecen muy lento), oso andino, venados, aves y polinizadores.</li>
+    <li>Más emisiones de carbono, porque los suelos y turberas del páramo almacenan mucho carbono.</li>
+    <li>Conflictos sociales entre conservación y sustento campesino.</li>
+  </ul></div>
+  <div id="t4" class="tab" style="display:none"><ul>
+    <li><b>Reconversión productiva:</b> buenas prácticas agrícolas, rotación, abonos orgánicos, manejo integrado de plagas y variedades de papa nativa.</li>
+    <li><b>Sistemas silvopastoriles:</b> árboles y cercas vivas con ganadería rotacional, para recuperar el suelo y dar sombra y forraje.</li>
+    <li><b>Restauración ecológica</b> con especies nativas y aislamiento de las zonas degradadas.</li>
+    <li><b>Pago por Servicios Ambientales (PSA)</b> y acuerdos de conservación que compensan a las familias por cuidar el páramo.</li>
+    <li><b>Ordenamiento del territorio:</b> respetar la delimitación de páramos y la Ley 1930 de 2018, con transición gradual para los campesinos que ya vivían allí.</li>
+    <li><b>Asociatividad y mercados</b> para productos sostenibles.</li>
+  </ul></div>
+  <div class="controls"><button class="btn primary" data-close>Volver al simulador</button></div>
+</div></div>
+
+<div class="modal" id="mEnd"><div class="box" id="endBox"></div></div>
+
+<script>
+const N=6, ZONE_ROWS=3, NEED=28, CREDIT=-15, BANKRUPT=-25, YEARS=10, PSA_PAY=0.45;
+const USES={
+  paramo:{name:'Páramo conservado',icon:'🌿',color:'#7c9a63',base:0,soil:3,cost:0,
+    desc:'Vegetación nativa (frailejón, pajonal). Regula el agua y alberga la fauna. No produce ingresos, salvo con PSA.'},
+  rest:{name:'Restauración nativa',icon:'🌱',color:'#a9c58d',base:-0.2,soil:5,cost:1.5,
+    desc:'Aislar la parcela y sembrar especies nativas. Cuesta $1,5 M y $0,2 M al año de mantenimiento. A los 3 años vuelve a ser páramo.'},
+  conv:{name:'Papa convencional',icon:'🥔',color:'#a8774a',base:3.2,soil:-7,cost:1.0,
+    desc:'El mayor ingreso, pero agota el suelo (−7/año, −10 en zona de páramo) y contamina mucho. Muy sensible a heladas.'},
+  bpa:{name:'Papa con buenas prácticas',icon:'🥔',badge:'♻️',color:'#c9a46a',base:2.4,soil:-1.5,cost:0.8,
+    desc:'Rotación, abonos orgánicos, manejo integrado de plagas y variedades nativas. Algo menos de ingreso, el suelo dura más y contamina poco.'},
+  gan:{name:'Ganadería extensiva',icon:'🐄',color:'#d6bf86',base:1.1,soil:-4,cost:0.5,
+    desc:'Poco ingreso por hectárea. El pisoteo compacta el suelo (−4/año) y reduce la infiltración de agua.'},
+  silvo:{name:'Silvopastoril',icon:'🌳',badge:'🐄',color:'#8fae68',base:1.6,soil:1.5,cost:1.2,
+    desc:'Ganado con árboles, cercas vivas y rotación de potreros. Recupera el suelo y protege de heladas.'}
+};
+const TOOLS=[
+  {id:'inspect',icon:'🔍',name:'Inspeccionar',cost:'Ver detalles'},
+  {id:'conv'},{id:'bpa'},{id:'gan'},{id:'silvo'},{id:'rest'},
+  {id:'undo',icon:'↩️',name:'Deshacer cambio',cost:'Recupera la inversión'}
+];
+const EVENTS=[
+  {id:'normal',p:.50,name:'Año normal',icon:'⛅',desc:'Lluvias dentro de lo esperado.',water:1},
+  {id:'nino',p:.17,name:'Fenómeno de El Niño',icon:'☀️',desc:'Sequía: menos lluvia y la quebrada baja su caudal. El ganado sufre por falta de pasto.',water:.72},
+  {id:'nina',p:.17,name:'Fenómeno de La Niña',icon:'🌧️',desc:'Lluvias intensas: más erosión en suelos de papa y potreros.',water:1.1},
+  {id:'helada',p:.16,name:'Heladas',icon:'❄️',desc:'Noches bajo 0 °C queman los cultivos de papa convencional.',water:.95}
+];
+const EV_MULT={
+  normal:{},
+  nino:{gan:.8,silvo:.9},
+  nina:{conv:.9,bpa:.95},
+  helada:{conv:.6,bpa:.82,gan:.88,silvo:.95}
+};
+const EV_SOIL={nina:{conv:-4,bpa:-1,gan:-2},normal:{},nino:{},helada:{}};
+
+let S;
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmt=v=>(v<0?'−':'')+'$'+Math.abs(v).toFixed(1).replace('.',',')+' M';
+const isAgro=u=>u==='conv'||u==='bpa'||u==='gan'||u==='silvo';
+const dirty=u=>u==='conv'||u==='bpa'||u==='gan';
+
+function newGame(){
+  const zone=['P','P','P','P','C','P', 'P','P','C','P','P','P', 'P','C','P','P','C','P'];
+  const agri=['C','C','G','G','C','C', 'G','C','C','G','G','C', 'C','G','G','C','C','G'];
+  const map={P:'paramo',C:'conv',G:'gan'};
+  const parcels=[];
+  [...zone,...agri].forEach((k,i)=>{
+    const r=Math.floor(i/N), c=i%N, z=r<ZONE_ROWS, use=map[k];
+    const soil= use==='paramo'?95 : (z?82:70-((i*7)%9)) - (use==='gan'?5:0);
+    const p={r,c,zone:z,use,soil,stage:0,converted:false,spent:0};
+    p.start={use,stage:0,converted:false};
+    parcels.push(p);
+  });
+  S={year:1,money:8,parcels,psa:false,tool:'inspect',sel:null,over:false,history:[],log:[],lastEvent:null,lastPrice:null};
+  const m=metrics(1);
+  S.contam=m.load;
+  S.history.push({year:0,water:m.water,bio:bioOf(m,S.contam),contam:S.contam,soil:m.soilAvg,money:S.money,income:null});
+  S.log.unshift({title:'Año 0 — Diagnóstico inicial',items:[
+    'La familia vive de 14 ha de papa convencional y 8 ha de ganadería extensiva. Cuatro parcelas de papa ya invadieron la zona de páramo.',
+    'Los suelos de la parte baja muestran desgaste y la quebrada ya recibe agroquímicos.',
+    'Reto: mantener el ingreso familiar y a la vez recuperar el agua y la biodiversidad del páramo.']});
+  $('psa').checked=false;
+  render();
+}
+
+function neighbors(p){
+  return S.parcels.filter(q=>Math.abs(q.r-p.r)+Math.abs(q.c-p.c)===1);
+}
+function natVal(p){
+  if(p.use==='paramo')return 1;
+  if(p.use==='rest')return .35+.15*p.stage;
+  if(p.use==='silvo')return .3;
+  return 0;
+}
+function metrics(evWater){
+  let zoneNat=0,otherNat=0,gan=0,agroZone=0,load=0,soilSum=0,natural=0,pairs=0;
+  S.parcels.forEach(p=>{
+    const n=natVal(p);
+    if(p.zone){zoneNat+=n; if(isAgro(p.use))agroZone++;}
+    else otherNat+=n;
+    if(p.use==='gan')gan++;
+    if(p.use==='conv')load+=1+(p.zone?.5:0);
+    if(p.use==='bpa')load+=.3;
+    if(p.use==='gan')load+=.3;
+    soilSum+=p.soil;
+    natural+= p.use==='paramo'?1: p.use==='rest'?.3+.15*p.stage : p.use==='silvo'?.35 : p.use==='bpa'?.1 : p.use==='gan'?.05:0;
+    if(p.use==='paramo')neighbors(p).forEach(q=>{if(q.use==='paramo')pairs+=.5;});
+  });
+  const eff=Math.min(1,(zoneNat+.5*otherNat)/18);
+  const water=clamp(100*(.15+.85*Math.pow(eff,1.2))*evWater - gan*.6,0,100);
+  return {water,agroZone,load:load/36*90,soilAvg:soilSum/36,natural,conn:pairs/60,gan};
+}
+function bioOf(m,contam){
+  return clamp(m.natural/36*130 - contam*.25 + m.conn*12,0,100);
+}
+function parcelIncome(p,ctx){
+  const u=USES[p.use];
+  if(p.use==='paramo') return ctx.psaOK?PSA_PAY:0;
+  if(p.use==='rest') return u.base+(ctx.psaOK?PSA_PAY:0);
+  const soilF=.25+.75*p.soil/100;
+  const evF=(EV_MULT[ctx.ev]||{})[p.use]||1;
+  const priceF=(p.use==='conv'||p.use==='bpa')?ctx.price:1;
+  return u.base*soilF*ctx.waterF*evF*priceF;
+}
+function waterF(w){return w>=60?1:Math.max(.35,w/60);}
+function preview(){
+  const m=metrics(1);
+  const psaOK=S.psa&&m.agroZone===0;
+  const ctx={ev:'normal',price:1,waterF:waterF(m.water),psaOK};
+  const inc=S.parcels.reduce((a,p)=>a+parcelIncome(p,ctx),0);
+  const contamN=.5*S.contam+.5*m.load;
+  return {m,psaOK,inc,net:inc-NEED,contamN,bio:bioOf(m,contamN)};
+}
+
+/* ---------- interaction ---------- */
+function applyTool(p){
+  if(S.over)return;
+  const t=S.tool;
+  S.sel=p;
+  if(t==='inspect'){render();return;}
+  if(t==='undo'){
+    if(p.use===p.start.use&&p.spent===0){toast('Esta parcela no tiene cambios este año.');render();return;}
+    revert(p);render();return;
+  }
+  if(p.use===t){render();return;}
+  if(t==='rest'&&p.start.use==='paramo'&&p.use===p.start.use){toast('Esta parcela ya es páramo conservado.');return;}
+  if(p.start.use===t){revert(p);render();return;}
+  if(t==='rest'&&p.start.use==='rest'){revert(p);render();return;}
+  const cost=USES[t].cost;
+  if(S.money+p.spent-cost<CREDIT){toast('No alcanza el dinero ni el crédito (máximo −$15 M) para este cambio.');return;}
+  const wasParamo=p.start.use==='paramo';
+  S.money+=p.spent-cost; p.spent=cost;
+  p.use=t; p.stage=0;
+  p.converted= t==='rest'?false:(wasParamo||p.start.converted);
+  if(wasParamo&&isAgro(t)){
+    toast(p.zone?'⚠️ Tumbaste páramo dentro de la zona protegida: buena cosecha al inicio, pero menos agua y riesgo de multa (Ley 1930).':'⚠️ Convertiste vegetación nativa en zona productiva.');
+  }
+  render();
+}
+function revert(p){
+  S.money+=p.spent; p.spent=0;
+  p.use=p.start.use; p.stage=p.start.stage; p.converted=p.start.converted;
+}
+
+/* ---------- yearly step ---------- */
+function pickEvent(){
+  let r=Math.random(),a=0;
+  for(const e of EVENTS){a+=e.p;if(r<a)return e;}
+  return EVENTS[0];
+}
+function step(){
+  if(S.over)return;
+  const ev=pickEvent();
+  const price=Math.round((.7+Math.random()*.65)*100)/100;
+  const m=metrics(ev.water);
+  const wf=waterF(m.water);
+  const psaOK=S.psa&&m.agroZone===0;
+  const ctx={ev:ev.id,price,waterF:wf,psaOK};
+  const byUse={};let income=0;
+  S.parcels.forEach(p=>{const v=parcelIncome(p,ctx);income+=v;byUse[p.use]=(byUse[p.use]||0)+v;});
+  // fines
+  let fines=0,fineCount=0;
+  S.parcels.forEach(p=>{if(p.converted&&isAgro(p.use)&&Math.random()<.3){fines+=2;fineCount++;}});
+  // soil + restoration
+  let restored=0;
+  S.parcels.forEach(p=>{
+    let d=USES[p.use].soil;
+    if(p.use==='conv'&&p.zone)d=-10;
+    d+=(EV_SOIL[ev.id]||{})[p.use]||0;
+    p.soil=clamp(p.soil+d,5,100);
+    if(p.use==='rest'){p.stage++; if(p.stage>=3){p.use='paramo';p.stage=0;restored++;}}
+  });
+  // contamination & bio
+  const m2=metrics(1);
+  S.contam=.5*S.contam+.5*m2.load;
+  const bio=bioOf(m2,S.contam);
+  const net=income-NEED-fines;
+  S.money+=net;
+  S.lastEvent=ev; S.lastPrice=price;
+  S.history.push({year:S.year,water:m.water,bio,contam:S.contam,soil:m2.soilAvg,money:S.money,income:income-fines});
+  // log
+  const items=[];
+  items.push(`${ev.icon} ${ev.name}. Precio de la papa: ${Math.round(price*100)}% del normal.`);
+  const parts=Object.entries(byUse).filter(([k,v])=>Math.abs(v)>.05).map(([k,v])=>`${USES[k].name}: ${fmt(v)}`);
+  items.push(`Ingresos ${fmt(income)} (${parts.join(' · ')}). Gastos de la familia ${fmt(NEED)}.${fines?` Multas por invadir el páramo: ${fmt(fines)} (${fineCount}).`:''} Balance del año: <b>${fmt(net)}</b>.`);
+  if(S.psa&&!psaOK)items.push('❌ El PSA quedó suspendido porque hay cultivos o ganado dentro de la zona de páramo.');
+  if(psaOK)items.push('✅ El acuerdo de conservación pagó el PSA por las hectáreas de páramo.');
+  if(m.water<60)items.push(`💧 El agua llegó a ${Math.round(m.water)}: no alcanzó para regar bien y las cosechas bajaron un ${Math.round((1-wf)*100)} %.`);
+  if(restored)items.push(`🌿 ${restored} parcela(s) en restauración volvieron a ser páramo.`);
+  const tired=S.parcels.filter(p=>(p.use==='conv'||p.use==='gan')&&p.soil<40).length;
+  if(tired)items.push(`🟫 ${tired} parcela(s) tienen el suelo agotado (menos de 40). Rinden mucho menos; considera reconvertirlas o restaurarlas.`);
+  if(S.contam>40)items.push(`☠️ La contaminación (${Math.round(S.contam)}) afecta la quebrada y a los polinizadores. Reducir la papa convencional la baja a la mitad en un año.`);
+  if(m2.agroZone>0&&!items.some(x=>x.includes('PSA')))items.push(`⛰️ Aún hay ${m2.agroZone} parcela(s) productivas dentro de la zona de páramo. Restaurarlas aumenta el agua para toda la finca.`);
+  S.log.unshift({title:`Año ${S.year}`,items,bad:net<0});
+  // reset year starts
+  S.parcels.forEach(p=>{p.start={use:p.use,stage:p.stage,converted:p.converted};p.spent=0;});
+  // end conditions
+  if(S.money<BANKRUPT){S.over=true;render();showEnd('bankrupt');return;}
+  if(m.water<20){S.over=true;render();showEnd('dry');return;}
+  if(S.year>=YEARS){S.over=true;render();showEnd('end');return;}
+  S.year++;
+  render();
+}
+
+/* ---------- render ---------- */
+function render(){
+  $('sYear').textContent=`${Math.min(S.year,YEARS)} / ${YEARS}`;
+  $('sMoney').textContent=fmt(S.money);
+  $('sMoney').style.color=S.money<0?'#ffd2c4':'';
+  const pv=preview();
+  $('sIncome').textContent=fmt(pv.net);
+  $('sIncome').style.color=pv.net<0?'#ffd2c4':'';
+  renderFarm(); renderPalette(); renderInds(pv); renderEvent(); renderFauna(pv); renderInfo(pv); renderCharts(); renderLog();
+  $('next').disabled=S.over;
+  $('next').textContent=S.over?'Simulación terminada':(S.year===YEARS?'Cerrar el año 10 y ver resultados ▶':'Avanzar al siguiente año ▶');
+}
+function soilColor(s){return s>65?'#3f8f4f':s>40?'#d1a93a':'#b5462f';}
+function renderFarm(){
+  const f=$('farm');f.innerHTML='';
+  const lab=document.createElement('div');lab.className='zonelabel';lab.innerHTML='<span>⛰️ Zona de páramo (más de 3.200 m)</span><span>nacimientos de agua</span>';f.appendChild(lab);
+  S.parcels.forEach((p,i)=>{
+    if(i===18){const l=document.createElement('div');l.className='zonelabel agri';l.innerHTML='<span>🏡 Zona agrícola (2.800–3.200 m)</span><span>vivienda y vía</span>';f.appendChild(l);}
+    const u=USES[p.use];
+    const d=document.createElement('div');
+    d.className='tile'+(S.sel===p?' sel':'')+((p.use!==p.start.use||p.spent)?' changed':'')+(p.converted&&isAgro(p.use)?' burned':'');
+    d.style.background=u.color;
+    d.title=`${u.name} · suelo ${Math.round(p.soil)}`;
+    d.innerHTML=`${u.icon}${u.badge?`<span class="badge">${u.badge}</span>`:''}${p.use==='rest'?`<span class="stage">${p.stage}/3</span>`:''}<span class="soil"><i style="width:${p.soil}%;background:${soilColor(p.soil)}"></i></span>`;
+    d.onclick=()=>applyTool(p);
+    f.appendChild(d);
+  });
+}
+function renderPalette(){
+  const el=$('palette');el.innerHTML='';
+  TOOLS.forEach(t=>{
+    const u=USES[t.id];
+    const b=document.createElement('button');
+    b.className='tool'+(S.tool===t.id?' on':'');
+    const name=u?u.name:t.name, icon=u?(u.icon+(u.badge||'')):t.icon;
+    const cost=u?`Inversión ${fmt(u.cost)}`:t.cost;
+    b.innerHTML=`<span class="ic">${icon}</span><span><b>${name}</b><small>${cost}</small></span>`;
+    b.title=u?u.desc:'';
+    b.onclick=()=>{S.tool=t.id;renderPalette();};
+    el.appendChild(b);
+  });
+}
+function indHTML(label,val,goal,good,color,sub){
+  const ok=good==='high'?val>=goal:val<=goal;
+  return `<div class="ind"><div class="top"><span>${label}</span><span class="${ok?'ok':'bad'}">${Math.round(val)} / 100</span></div>
+  <div class="bar"><i style="width:${val}%;background:${color}"></i><span class="goal" style="left:${goal}%"></span></div>
+  <div class="sub">${sub}</div></div>`;
+}
+function renderInds(pv){
+  const m=pv.m;
+  $('inds').innerHTML=
+    indHTML('💧 Agua disponible',m.water,60,'high','#2f6f8f',`Regulación hídrica del páramo. Meta ≥ 60. ${m.agroZone?`${m.agroZone} parcelas productivas en la zona alta la reducen.`:'La zona de páramo está libre de cultivos.'}`)+
+    indHTML('🐻 Biodiversidad',pv.bio,50,'high','#4f7f5f','Coberturas nativas, su conectividad y la contaminación. Meta ≥ 50.')+
+    indHTML('☠️ Contaminación por agroquímicos',pv.contamN,40,'low','#b5462f','Se acumula en la quebrada. Meta ≤ 40.')+
+    indHTML('🟫 Salud promedio del suelo',m.soilAvg,50,'high','#a0703f','Determina el rendimiento de los cultivos y potreros.')+
+    `<div class="sub" style="margin-top:6px">PSA: ${S.psa?(pv.psaOK?'<span class="ok">activo, pagará este año</span>':'<span class="bad">suspendido (hay producción en la zona de páramo)</span>'):'no inscrito'}</div>`;
+}
+function renderEvent(){
+  const e=S.lastEvent;
+  if(!e){$('event').innerHTML='<span class="big">🗓️</span><div><b>Aún no ha pasado ningún año.</b><div class="hint">Cada año el clima y el precio de la papa cambian al azar. Diseña una finca que resista El Niño, La Niña y las heladas.</div></div>';return;}
+  $('event').innerHTML=`<span class="big">${e.icon}</span><div><b>${e.name}</b><div class="hint">${e.desc}</div><div style="margin-top:4px;font-size:13px">🥔 Precio de la papa: <b>${Math.round(S.lastPrice*100)} %</b> del normal</div></div>`;
+}
+function renderFauna(pv){
+  const par=S.parcels.filter(p=>p.use==='paramo').length;
+  const list=[
+    ['🌼','Frailejones',`${par} ha de páramo`,par>=10],
+    ['🐻','Oso andino',pv.bio>=62?'Visto en la finca':'Necesita biodiversidad ≥ 62',pv.bio>=62],
+    ['🦌','Venado de cola blanca',pv.bio>=50&&pv.m.conn>.3?'Corredor conectado':'Necesita páramo conectado',pv.bio>=50&&pv.m.conn>.3],
+    ['🐝','Abejas y polinizadores',pv.contamN<35?'Polinizan los cultivos':'Afectados por plaguicidas',pv.contamN<35],
+    ['🐦','Colibríes y aves',pv.bio>=40?'Población estable':'Población en declive',pv.bio>=40],
+    ['🐸','Ranas y anfibios',pv.contamN<30&&pv.m.water>=65?'Quebrada sana':'Sensibles a contaminación y sequía',pv.contamN<30&&pv.m.water>=65]
+  ];
+  $('fauna').innerHTML=list.map(([e,n,s,on])=>`<div class="fa ${on?'':'off'}"><span class="e">${e}</span><span><b>${n}</b><br><span class="hint">${s}</span></span></div>`).join('');
+}
+function renderInfo(pv){
+  const p=S.sel;
+  if(!p){return;}
+  const u=USES[p.use];
+  const m=pv.m;
+  const inc=parcelIncome(p,{ev:'normal',price:1,waterF:waterF(m.water),psaOK:pv.psaOK});
+  $('pinfo').innerHTML=`<div style="font-size:16px;font-weight:800;margin-bottom:4px">${u.icon} ${u.name}</div>
+   <div class="hint" style="margin-bottom:6px">${u.desc}</div>
+   <table>
+    <tr><td>Ubicación</td><td>${p.zone?'Zona de páramo':'Zona agrícola'} (fila ${p.r+1}, col. ${p.c+1})</td></tr>
+    <tr><td>Salud del suelo</td><td style="color:${soilColor(p.soil)}">${Math.round(p.soil)} / 100</td></tr>
+    <tr><td>Ingreso estimado (año normal)</td><td>${fmt(inc)}</td></tr>
+    ${p.use==='rest'?`<tr><td>Avance de la restauración</td><td>${p.stage} / 3 años</td></tr>`:''}
+    ${p.converted&&isAgro(p.use)?'<tr><td>Situación legal</td><td class="bad">Páramo intervenido: riesgo de multa</td></tr>':''}
+   </table>`;
+}
+function svgChart(series,opt){
+  const W=520,H=190,L=34,R=10,T=10,B=24;
+  const {min,max}=opt;
+  const x=i=>L+(W-L-R)*i/YEARS, y=v=>T+(H-T-B)*(1-(v-min)/(max-min));
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  const ticks=opt.ticks;
+  ticks.forEach(t=>{s+=`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="${t===0?'#9a9584':'#e7e1d1'}" stroke-width="1"/><text x="${L-6}" y="${y(t)+4}" font-size="10" text-anchor="end" fill="#6b6f63">${t}</text>`;});
+  for(let i=0;i<=YEARS;i++)s+=`<text x="${x(i)}" y="${H-6}" font-size="10" text-anchor="middle" fill="#6b6f63">${i}</text>`;
+  (opt.bars||[]).forEach(b=>{
+    b.data.forEach((d,i)=>{if(d.v==null)return;const v=clamp(d.v,min,max);const y0=y(0),y1=y(v);
+      s+=`<rect x="${x(d.i)-8}" y="${Math.min(y0,y1)}" width="16" height="${Math.abs(y0-y1)}" rx="3" fill="${b.color}" opacity=".85"/>`;});
+  });
+  (opt.hlines||[]).forEach(h=>{s+=`<line x1="${L}" x2="${W-R}" y1="${y(h.v)}" y2="${y(h.v)}" stroke="${h.color}" stroke-dasharray="5 4" stroke-width="1.5"/>`;});
+  series.forEach(se=>{
+    const pts=se.data.map((v,i)=>`${x(i)},${y(clamp(v,min,max))}`).join(' ');
+    s+=`<polyline points="${pts}" fill="none" stroke="${se.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    se.data.forEach((v,i)=>{s+=`<circle cx="${x(i)}" cy="${y(clamp(v,min,max))}" r="3" fill="${se.color}"><title>Año ${i}: ${Math.round(v*10)/10}</title></circle>`;});
+  });
+  return s+'</svg>';
+}
+function renderCharts(){
+  const h=S.history;
+  $('chartEnv').innerHTML=svgChart([
+    {data:h.map(d=>d.water),color:'#2f6f8f'},
+    {data:h.map(d=>d.bio),color:'#4f7f5f'},
+    {data:h.map(d=>d.contam),color:'#b5462f'},
+    {data:h.map(d=>d.soil),color:'#a0703f'}
+  ],{min:0,max:100,ticks:[0,25,50,75,100]});
+  const mins=Math.min(-30,...h.map(d=>d.money)), maxs=Math.max(60,...h.map(d=>Math.max(d.money,d.income||0)));
+  const lo=Math.floor(mins/10)*10, hi=Math.ceil(maxs/10)*10, ticks=[];
+  for(let t=lo;t<=hi;t+=hi-lo>80?20:10)ticks.push(t);
+  $('chartMoney').innerHTML=svgChart([{data:h.map(d=>d.money),color:'#2f5a43'}],
+    {min:lo,max:hi,ticks,bars:[{color:'#c38b2c',data:h.map((d,i)=>({i,v:d.income}))}],hlines:[{v:NEED,color:'#25302a'}]});
+}
+function renderLog(){
+  $('log').innerHTML=S.log.map(e=>`<div class="entry" style="border-left-color:${e.bad?'#b5462f':'#4f7f5f'}"><b>${e.title}</b><ul>${e.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('');
+}
+
+/* ---------- end ---------- */
+function showEnd(kind){
+  const m=metrics(1);
+  const bio=bioOf(m,S.contam);
+  const c={money:S.money>=0,water:m.water>=60,bio:bio>=50,contam:S.contam<=40};
+  const pts=(c.money?25:Math.max(0,25+S.money))+(c.water?25:m.water/60*25)+(c.bio?25:bio/50*25)+(c.contam?25:Math.max(0,25-(S.contam-40)));
+  let score=Math.round(kind==='end'?pts:pts*S.year/YEARS*.6);
+  let title,msg;
+  if(kind==='bankrupt'){title='💸 La familia abandonó la finca';msg=`En el año ${S.year} las deudas superaron ${fmt(BANKRUPT)}. Sin ingresos estables, la familia migró a la ciudad. Una estrategia sostenible también tiene que ser viable económicamente: haz los cambios por etapas y aprovecha el PSA.`;}
+  else if(kind==='dry'){title='🏜️ La quebrada se secó';msg=`En el año ${S.year} el agua bajó de 20. Sin páramo que regule el agua, la vereda se quedó sin ella y la producción colapsó.`;}
+  else{
+    const all=Object.values(c).every(Boolean);
+    title=all?'🏆 ¡Finca sostenible lograda!':(c.money?'⚖️ La familia sobrevivió, pero el páramo pagó el precio':'🌿 El páramo mejoró, pero la economía familiar no aguantó');
+    msg=all?'Lograste que la familia viviera de su tierra mientras el páramo recuperaba su capacidad de dar agua y su biodiversidad. Este es el equilibrio que buscan la reconversión productiva y los acuerdos de conservación.'
+      :c.money?'La producción se mantuvo, pero algunos indicadores ambientales no llegaron a la meta. A largo plazo, el agua, el suelo y la contaminación terminan afectando también los ingresos.'
+      :'Conservar sin un ingreso suficiente no es sostenible para las familias campesinas. Combina la conservación con producción reconvertida (buenas prácticas, silvopastoril) y con el PSA.';
+  }
+  const cell=(ok,ic,v,l)=>`<div style="background:${ok?'#e5f1e3':'#f8e3dd'}">${ic}<b>${v}</b>${l} ${ok?'✅':'❌'}</div>`;
+  const resumen=`Páramo Vivo — Resultado: ${title.replace(/^[^\wÁÉÍÓÚ¡]+/,'')}\nPuntaje: ${score}/100 · Años jugados: ${S.year}\nAhorros: ${fmt(S.money)} · Agua: ${Math.round(m.water)} · Biodiversidad: ${Math.round(bio)} · Contaminación: ${Math.round(S.contam)}\nUso final: ${Object.keys(USES).map(k=>`${USES[k].name} ${S.parcels.filter(p=>p.use===k).length} ha`).join(', ')}`;
+  $('endBox').innerHTML=`<h2>${title}</h2><div class="score">${score}<span style="font-size:20px;color:#6b6f63">/100</span></div>
+   <p>${msg}</p>
+   <div class="crit">${cell(c.money,'💰',fmt(S.money),'Ahorros')}${cell(c.water,'💧',Math.round(m.water),'Agua')}${cell(c.bio,'🐻',Math.round(bio),'Biodiversidad')}${cell(c.contam,'☠️',Math.round(S.contam),'Contaminación')}</div>
+   <h3>Para reflexionar</h3>
+   <ul>
+    <li>¿Qué pasó con el rendimiento de la papa convencional a medida que el suelo se agotaba?</li>
+    <li>¿Cómo afectaron El Niño y las heladas a cada tipo de producción?</li>
+    <li>¿Por qué el agua de toda la finca depende de lo que pasa en la zona alta?</li>
+    <li>¿Qué papel juegan incentivos como el PSA en las decisiones de una familia campesina?</li>
+   </ul>
+   <div class="controls"><button class="btn primary" id="again">Jugar de nuevo con otra estrategia</button><button class="btn ghost" id="copy">📋 Copiar resultado</button><button class="btn ghost" data-close>Ver mi finca</button></div>`;
+  $('mEnd').classList.add('show');
+  $('again').onclick=()=>{$('mEnd').classList.remove('show');newGame();};
+  $('copy').onclick=()=>{try{navigator.clipboard.writeText(resumen).then(()=>toast('Resultado copiado.'),()=>toast('No se pudo copiar.'));}catch(e){toast('No se pudo copiar.');}};
+  bindClose();
+}
+
+/* ---------- misc ---------- */
+let tt;
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),3800);}
+function bindClose(){document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('show'));}
+$('next').onclick=step;
+$('reset').onclick=()=>newGame();
+$('help').onclick=()=>$('mHelp').classList.add('show');
+$('learn').onclick=()=>$('mLearn').classList.add('show');
+$('psa').onchange=e=>{S.psa=e.target.checked;render();};
+document.querySelectorAll('#learnTabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#learnTabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('#mLearn .tab').forEach(t=>t.style.display=t.id===b.dataset.t?'':'none');
+});
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
+$('helpUses').innerHTML='<ul>'+Object.values(USES).map(u=>`<li>${u.icon}${u.badge||''} <b>${u.name}</b>: ${u.desc}</li>`).join('')+'</ul>';
+bindClose();
+newGame();
+$('mHelp').classList.add('show');
+</script>
+</body>
+</html>
